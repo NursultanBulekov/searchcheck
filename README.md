@@ -21,9 +21,17 @@ Open http://localhost:5173. This command runs both the React frontend and the lo
 - Keep received replies and next steps in response notes.
 - Paste the original job description; generate and review a short AI summary or write one yourself.
 - Search by company, role, summary, or notes and filter by platform or status.
-- Export a JSON backup.
+- Export a JSON backup and import it on another device.
 
-Applications are saved in this browser's localStorage. They persist across reloads but do not sync across browsers or devices. Clearing browser data removes them. Export backups regularly. Export is a backup download; a restore/import interface is not included yet.
+Applications are saved in this browser's localStorage. They persist across reloads but do not sync across browsers or devices. Clearing browser data removes them. Export backups regularly.
+
+## Transfer to another device
+
+1. Click **Export backup** on the original device to download `job-applications.json`.
+2. Transfer that file to the other device and open this app there.
+3. Click **Import backup**, select the JSON file, review the counts, and click **Import applications**.
+
+Import adds new records and keeps existing records with the same ID unchanged. Importing the same backup twice does not create duplicates. To update an existing record on the receiving device, edit it there; importing an older backup will not overwrite it. Files must be valid app backups smaller than 5 MB. Validation failures leave your current records unchanged.
 
 Platforms are labels you select manually. This app does not read Gmail, Telegram, or hh.kz or send applications automatically.
 

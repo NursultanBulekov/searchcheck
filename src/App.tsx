@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import type { ChangeEvent } from "react";
+import { MAX_BACKUP_BYTES, mergeBackup, parseBackup } from "./backups";
 import ApplicationForm from "./components/ApplicationForm";
 import { platforms, readApplications, statuses, STORAGE_KEY } from "./types";
 import type { Application, Draft, Status } from "./types";
@@ -25,6 +27,53 @@ function App() {
   const [status, setStatus] = useState("All statuses");
   const [platform, setPlatform] = useState("All platforms");
   const [deleting, setDeleting] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [backup, setBackup] = useState<{
+    name: string;
+    applications: Application[];
+  } | null>(null);
+  const [notice, setNotice] = useState("");
+
+  async function selectBackup(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setError("");
+    setNotice("");
+    setBackup(null);
+    setImporting(true);
+    try {
+      if (file.size > MAX_BACKUP_BYTES)
+        throw new Error("Choose a JSON backup smaller than 5 MB.");
+      const imported = parseBackup(await file.text());
+      if (!imported.length) {
+        setNotice("This backup is empty. No applications were changed.");
+        return;
+      }
+      setBackup({ name: file.name, applications: imported });
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Could not read this backup. No applications were changed.",
+      );
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function importBackup() {
+    if (!backup) return;
+    const result = mergeBackup(applications, backup.applications);
+    if (persist(result.applications)) {
+      setNotice(
+        `Imported ${result.added} application${result.added === 1 ? "" : "s"}. Skipped ${result.skipped} already on this device; existing records were kept.`,
+      );
+      setBackup(null);
+      clearFilters();
+    }
+  }
 
   // Save changes before updating the page, so storage failures cannot silently lose data.
   function persist(next: Application[]) {
@@ -72,6 +121,9 @@ function App() {
     link.download = "job-applications.json";
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setNotice(
+      "Backup downloaded. Transfer the JSON file to another device and select Import backup there.",
+    );
   }
 
   function clearFilters() {
@@ -157,6 +209,11 @@ function App() {
             {error}
           </p>
         )}
+        {notice && (
+          <p className="backup-notice" role="status">
+            {notice}
+          </p>
+        )}
         {editing ? (
           <ApplicationForm
             key={editing === "new" ? "new" : editing.id}
@@ -174,14 +231,56 @@ function App() {
                 </h2>
                 <p>Keep the details. See the progress.</p>
               </div>
-              <button
-                className="quiet"
-                disabled={!applications.length}
-                onClick={exportData}
-              >
-                ↓ Export backup
-              </button>
+              <div className="backup-actions">
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept=".json,application/json"
+                  hidden
+                  onChange={selectBackup}
+                  aria-label="Choose application backup"
+                />
+                <button
+                  className="quiet"
+                  disabled={!!loaded.error || importing}
+                  onClick={() => fileInput.current?.click()}
+                >
+                  {importing ? "Reading backup…" : "↑ Import backup"}
+                </button>
+                <button
+                  className="quiet"
+                  disabled={!applications.length}
+                  onClick={exportData}
+                >
+                  ↓ Export backup
+                </button>
+              </div>
             </div>
+            {backup && (
+              <section
+                className="backup-preview"
+                aria-label="Review backup import"
+              >
+                <div>
+                  <strong>Import {backup.name}?</strong>
+                  <p>
+                    {mergeBackup(applications, backup.applications).added} new
+                    applications will be added.{" "}
+                    {mergeBackup(applications, backup.applications).skipped}{" "}
+                    existing applications will be skipped. Your current records
+                    will be kept.
+                  </p>
+                </div>
+                <div className="backup-actions">
+                  <button className="quiet" onClick={() => setBackup(null)}>
+                    Cancel
+                  </button>
+                  <button className="secondary" onClick={importBackup}>
+                    Import applications
+                  </button>
+                </div>
+              </section>
+            )}
             <div className="filters">
               <label className="search">
                 <span className="sr-only">Search applications</span>

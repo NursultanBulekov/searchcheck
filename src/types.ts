@@ -40,7 +40,7 @@ export function readApplications(): Application[] {
     );
   return data;
 }
-function isApplication(value: unknown): value is Application {
+export function isApplication(value: unknown): value is Application {
   if (!value || typeof value !== "object") return false;
   const a = value as Record<string, unknown>;
   return (

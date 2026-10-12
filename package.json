@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node --test server/api.test.mjs"
+    "test": "node --test server/api.test.mjs src/backups.test.mjs"
   },
   "dependencies": {
     "ai": "^7.0.138",
